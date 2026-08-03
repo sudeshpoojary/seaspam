@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="Sea Spam - AI-Powered Maritime Emergency Response Command Center for real-time SOS alerts, rescue coordination, and vessel tracking.">
+    <title>Sea Spam | Maritime Emergency Response Command Center</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div class="loader-content">
+            <div class="radar-spinner">
+                <div class="radar-sweep"></div>
+                <div class="radar-dot"></div>
+            </div>
+            <h1 class="loader-title">SEA<span>SPAM</span></h1>
+            <p class="loader-subtitle">Initializing Command Center...</p>
+            <div class="loader-bar">
+                <div class="loader-fill"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div id="app" class="app-container">
+        <!-- Top Navigation Bar -->
+        <header id="top-bar" class="top-bar">
+            <div class="top-bar-left">
+                <div class="logo">
+                    <i class="fas fa-anchor"></i>
+                    <span class="logo-text">SEA<span class="accent">SPAM</span></span>
+                </div>
+                <div class="system-status" id="system-status">
+                    <span class="status-dot online"></span>
+                    <span>SYSTEM ONLINE</span>
+                </div>
+            </div>
+            <div class="top-bar-center">
+                <div class="stat-chip" id="stat-vessels">
+                    <i class="fas fa-ship"></i>
+                    <span class="stat-label">Active Vessels</span>
+                    <span class="stat-value" id="active-vessels-count">0</span>
+                </div>
+                <div class="stat-chip alert" id="stat-alerts">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span class="stat-label">Active SOS</span>
+                    <span class="stat-value" id="active-sos-count">0</span>
+                </div>
+                <div class="stat-chip" id="stat-rescue">
+                    <i class="fas fa-life-ring"></i>
+                    <span class="stat-label">Rescue Units</span>
+                    <span class="stat-value" id="rescue-units-count">0</span>
+                </div>
+                <div class="stat-chip" id="stat-response">
+                    <i class="fas fa-clock"></i>
+                    <span class="stat-label">Avg Response</span>
+                    <span class="stat-value" id="avg-response-time">0m</span>
+                </div>
+            </div>
+            <div class="top-bar-right">
+                <div class="datetime" id="datetime"></div>
+                <button class="btn-icon" id="btn-theme" title="Toggle Theme"><i class="fas fa-moon"></i></button>
+                <button class="btn-icon" id="btn-fullscreen" title="Fullscreen"><i class="fas fa-expand"></i></button>
+                <button class="btn-sos" id="btn-trigger-sos" title="Simulate SOS">
+                    <i class="fas fa-broadcast-tower"></i> SOS DRILL
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Left Sidebar -->
+            <aside id="left-sidebar" class="sidebar left-sidebar">
+                <div class="sidebar-section">
+                    <h3 class="section-title"><i class="fas fa-radar"></i> Fleet Monitor</h3>
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="vessel-search" placeholder="Search vessels...">
+                    </div>
+                    <div class="vessel-list" id="vessel-list"></div>
+                </div>
+                <div class="sidebar-section">
+                    <h3 class="section-title"><i class="fas fa-life-ring"></i> Rescue Units</h3>
+                    <div class="rescue-list" id="rescue-list"></div>
+                </div>
+                <div class="sidebar-section">
+                    <h3 class="section-title"><i class="fas fa-building"></i> Coastal Stations</h3>
+                    <div class="station-list" id="station-list"></div>
+                </div>
+            </aside>
+
+            <!-- Map Area -->
+            <div class="map-container">
+                <div id="map" class="map"></div>
+                <!-- Map Overlay Controls -->
+                <div class="map-controls">
+                    <button class="map-btn active" id="btn-layer-vessels" title="Toggle Vessels"><i
+                            class="fas fa-ship"></i></button>
+                    <button class="map-btn active" id="btn-layer-rescue" title="Toggle Rescue"><i
+                            class="fas fa-helicopter"></i></button>
+                    <button class="map-btn active" id="btn-layer-stations" title="Toggle Stations"><i
+                            class="fas fa-broadcast-tower"></i></button>
+                    <button class="map-btn" id="btn-layer-weather" title="Toggle Weather"><i
+                            class="fas fa-cloud"></i></button>
+                    <button class="map-btn" id="btn-layer-zones" title="Toggle Zones"><i
+                            class="fas fa-draw-polygon"></i></button>
+                </div>
+                <!-- Weather Overlay -->
+                <div class="weather-panel" id="weather-panel">
+                    <h4><i class="fas fa-cloud-sun"></i> Sea Conditions</h4>
+                    <div class="weather-grid">
+                        <div class="weather-item">
+                            <span class="weather-label">Wind</span>
+                            <span class="weather-value" id="wind-speed">12 kn</span>
+                        </div>
+                        <div class="weather-item">
+                            <span class="weather-label">Wave Height</span>
+                            <span class="weather-value" id="wave-height">1.2 m</span>
+                        </div>
+                        <div class="weather-item">
+                            <span class="weather-label">Visibility</span>
+                            <span class="weather-value" id="visibility">8 nm</span>
+                        </div>
+                        <div class="weather-item">
+                            <span class="weather-label">Sea State</span>
+                            <span class="weather-value" id="sea-state">Moderate</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- AI Insights -->
+                <div class="ai-panel" id="ai-panel">
+                    <div class="ai-header">
+                        <h4><i class="fas fa-brain"></i> AI Insights</h4>
+                        <span class="ai-badge">LIVE</span>
+                    </div>
+                    <div class="ai-content" id="ai-insights"></div>
+                </div>
+            </div>
+
+            <!-- Right Sidebar -->
+            <aside id="right-sidebar" class="sidebar right-sidebar">
+                <!-- Tabs -->
+                <div class="sidebar-tabs">
+                    <button class="tab-btn active" data-tab="alerts-tab"><i class="fas fa-bell"></i> Alerts</button>
+                    <button class="tab-btn" data-tab="comms-tab"><i class="fas fa-comments"></i> Comms</button>
+                    <button class="tab-btn" data-tab="dispatch-tab"><i class="fas fa-route"></i> Dispatch</button>
+                </div>
+                <!-- Alerts Tab -->
+                <div class="tab-content active" id="alerts-tab">
+                    <div class="alert-feed" id="alert-feed"></div>
+                </div>
+                <!-- Communications Tab -->
+                <div class="tab-content" id="comms-tab">
+                    <div class="comm-channels" id="comm-channels">
+                        <button class="channel-btn active" data-channel="emergency">Emergency</button>
+                        <button class="channel-btn" data-channel="rescue">Rescue Ops</button>
+                        <button class="channel-btn" data-channel="command">Command</button>
+                    </div>
+                    <div class="comm-messages" id="comm-messages"></div>
+                    <div class="comm-input">
+                        <input type="text" id="comm-text" placeholder="Type message...">
+                        <button class="btn-send" id="btn-send"><i class="fas fa-paper-plane"></i></button>
+                    </div>
+                </div>
+                <!-- Dispatch Tab -->
+                <div class="tab-content" id="dispatch-tab">
+                    <div class="dispatch-info" id="dispatch-info">
+                        <div class="dispatch-empty">
+                            <i class="fas fa-check-circle"></i>
+                            <p>No active dispatch operations</p>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </main>
+
+        <!-- Bottom Analytics Bar -->
+        <footer class="analytics-bar" id="analytics-bar">
+            <div class="analytics-item">
+                <canvas id="chart-response" width="180" height="50"></canvas>
+                <span class="analytics-label">Response Times (24h)</span>
+            </div>
+            <div class="analytics-item">
+                <canvas id="chart-incidents" width="180" height="50"></canvas>
+                <span class="analytics-label">Incidents (7d)</span>
+            </div>
+            <div class="analytics-item">
+                <div class="analytics-metric">
+                    <span class="metric-value" id="rescue-success">97.8%</span>
+                    <span class="metric-label">Rescue Success Rate</span>
+                </div>
+            </div>
+            <div class="analytics-item">
+                <div class="analytics-metric">
+                    <span class="metric-value" id="lives-saved">1,247</span>
+                    <span class="metric-label">Lives Saved (YTD)</span>
+                </div>
+            </div>
+            <div class="analytics-item">
+                <div class="analytics-metric">
+                    <span class="metric-value" id="coverage-area">42,000 km²</span>
+                    <span class="metric-label">Coverage Area</span>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- SOS Alert Modal -->
+    <div class="modal-overlay" id="sos-modal">
+        <div class="modal sos-modal">
+            <div class="modal-header sos-header">
+                <div class="sos-pulse"></div>
+                <h2><i class="fas fa-exclamation-triangle"></i> SOS DISTRESS ALERT</h2>
+            </div>
+            <div class="modal-body" id="sos-modal-body">
+                <div class="sos-detail-grid"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" id="btn-dispatch-rescue"><i class="fas fa-helicopter"></i> Dispatch
+                    Rescue</button>
+                <button class="btn btn-secondary" id="btn-acknowledge-sos"><i class="fas fa-check"></i>
+                    Acknowledge</button>
+                <button class="btn btn-ghost" id="btn-close-sos">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audio for alerts -->
+    <audio id="sos-audio" preload="auto">
+        <source src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA"
+            type="audio/wav">
+    </audio>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="data.js"></script>
+    <script src="map.js"></script>
+    <script src="dispatch.js"></script>
+    <script src="comms.js"></script>
+    <script src="app.js"></script>
+</body>
+
+</html>
